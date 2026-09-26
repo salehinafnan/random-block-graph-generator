@@ -1,31 +1,22 @@
-import { FC } from "react";
+import type { Point } from "./types";
 
 interface LineProps {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
+  from: Point;
+  to: Point;
 }
 
-export const Line: FC<LineProps> = ({ from, to }) => {
-  const boxWidth = 100;
-  const boxHeight = 100;
-
-  const dx = to.x + boxWidth / 2 - (from.x + boxWidth / 2);
-  const dy = to.y + boxHeight / 2 - (from.y + boxHeight / 2);
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const length = Math.sqrt(dx * dx + dy * dy);
+export const Line = ({ from, to }: LineProps) => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
 
   return (
     <div
+      className="pointer-events-none absolute z-0 origin-top-left border-t-2 border-dashed border-black"
       style={{
-        position: "absolute",
-        top: `${from.y + boxHeight / 2}px`,
-        left: `${from.x + boxWidth / 2}px`,
-        width: `${length}px`,
-        height: "0",
-        border: "1px dashed black",
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: "0 0",
-        zIndex: 1,
+        left: from.x,
+        top: from.y,
+        width: Math.hypot(dx, dy),
+        transform: `rotate(${Math.atan2(dy, dx)}rad)`,
       }}
     />
   );
