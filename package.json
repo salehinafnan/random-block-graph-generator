@@ -2,6 +2,8 @@
   "name": "random-block-graph-generator",
   "private": true,
   "version": "0.0.0",
+  "description": "Build random block graphs in your browser. Add, drag, resize and delete connected blocks.",
+  "homepage": "https://random-block-graph-generator.vercel.app",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.13.0"
