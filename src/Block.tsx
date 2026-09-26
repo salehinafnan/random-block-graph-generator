@@ -1,134 +1,132 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { PointerEvent } from "react";
+import type { Point, Size } from "./types";
+
+const MIN_SIZE = 100;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(value, max));
 
 interface BlockProps {
-  id: string;
-  onAddBlock: (id: string) => void;
-  onDeleteBlock: (id: string) => void;
-  position: { x: number; y: number };
-  onMoveBlock: (id: string, position: { x: number; y: number }) => void;
+  id: number;
+  position: Point;
+  size: Size;
+  deletable: boolean;
+  onAddBlock: (parentId: number) => void;
+  onDeleteBlock: (id: number) => void;
+  onMoveBlock: (id: number, position: Point) => void;
+  onResizeBlock: (id: number, size: Size) => void;
 }
+
+type Gesture = "move" | "resize";
 
 export const Block = ({
   id,
+  position,
+  size,
+  deletable,
   onAddBlock,
   onDeleteBlock,
-  position,
   onMoveBlock,
+  onResizeBlock,
 }: BlockProps) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [color, setColor] = useState("darkgrey");
-  const [size, setSize] = useState({ width: 100, height: 100 });
+  const [gesture, setGesture] = useState<Gesture | null>(null);
+  // Active pointer and its offset from the top-left (move) or bottom-right (resize) corner
+  const pointer = useRef({ id: -1, dx: 0, dy: 0 });
 
-  const handleMouseDown = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
-      setIsDragging(true);
-      setColor("red");
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    } else {
-      document.addEventListener("mousemove", handleResize);
-      document.addEventListener("mouseup", handleMouseUp);
+  const handlePointerDown = (
+    event: PointerEvent<HTMLElement>,
+    type: Gesture,
+  ) => {
+    if (
+      gesture ||
+      event.button !== 0 ||
+      (event.target as Element).closest("button")
+    ) {
+      return;
     }
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const corner =
+      type === "move"
+        ? position
+        : { x: position.x + size.width, y: position.y + size.height };
+    pointer.current = {
+      id: event.pointerId,
+      dx: event.clientX - corner.x,
+      dy: event.clientY - corner.y,
+    };
+    setGesture(type);
   };
 
-  const handleMouseMove = (event: MouseEvent) => {
-    onMoveBlock(id, { x: event.clientX, y: event.clientY });
-  };
+  const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerId !== pointer.current.id) return;
+    const x = event.clientX - pointer.current.dx;
+    const y = event.clientY - pointer.current.dy;
 
-  const handleResize = (event: MouseEvent) => {
-    const newWidth = event.clientX - position.x;
-    const newHeight = event.clientY - position.y;
-    if (newWidth >= 100 && newHeight >= 100) {
-      setSize({
-        width: newWidth,
-        height: newHeight,
+    if (gesture === "move") {
+      onMoveBlock(id, {
+        x: clamp(x, 0, window.innerWidth - size.width),
+        y: clamp(y, 0, window.innerHeight - size.height),
+      });
+    } else if (gesture === "resize") {
+      onResizeBlock(id, {
+        width: clamp(x - position.x, MIN_SIZE, window.innerWidth - position.x),
+        height: clamp(
+          y - position.y,
+          MIN_SIZE,
+          window.innerHeight - position.y,
+        ),
       });
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setColor("darkgrey");
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mousemove", handleResize);
-    document.removeEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleAddBlock = () => {
-    onAddBlock(id);
-  };
-
-  const handleDeleteBlock = () => {
-    onDeleteBlock(id);
+  const handlePointerUp = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerId === pointer.current.id) setGesture(null);
   };
 
   return (
     <div
+      className={`absolute flex touch-none flex-col items-center justify-between p-2.5 text-white select-none ${
+        gesture === "move"
+          ? "cursor-grabbing bg-[red]"
+          : "cursor-grab bg-[darkgrey]"
+      } ${gesture ? "z-20" : "z-10"}`}
       style={{
-        position: "absolute",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        width: `${size.width}px`,
-        height: `${size.height}px`,
-        backgroundColor: color,
-        color: "white",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexDirection: "column",
-        zIndex: isDragging ? 3 : 2,
-        padding: "10px",
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={(event) => handlePointerDown(event, "move")}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onLostPointerCapture={handlePointerUp}
     >
       <div>{id}</div>
-      <div
-        style={{
-          width: "70%",
-          height: "40%",
-          backgroundColor: "white",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <div className="flex h-2/5 w-[70%] items-center justify-center bg-white">
         <button
-          style={{
-            backgroundColor: "transparent",
-            border: "none",
-            color: "black",
-            fontSize: "2em",
-            marginRight: "10px",
-            marginLeft: "10px",
-          }}
-          onClick={handleAddBlock}
+          type="button"
+          aria-label="Add child block"
+          className="mx-2.5 cursor-pointer text-[2em] text-black"
+          onClick={() => onAddBlock(id)}
         >
           +
         </button>
         <button
-          style={{
-            backgroundColor: "transparent",
-            border: "none",
-            color: "black",
-            fontSize: "2em",
-            marginRight: "10px",
-            marginLeft: "10px",
-          }}
-          onClick={handleDeleteBlock}
+          type="button"
+          aria-label="Delete block"
+          className="mx-2.5 cursor-pointer text-[2em] text-black disabled:cursor-not-allowed disabled:opacity-30"
+          disabled={!deletable}
+          onClick={() => onDeleteBlock(id)}
         >
           -
         </button>
       </div>
       <div
-        style={{
-          position: "absolute",
-          right: 0,
-          bottom: 0,
-          width: "10px",
-          height: "10px",
-          backgroundColor: "black",
-          cursor: "nwse-resize",
-        }}
+        className="absolute right-0 bottom-0 size-2.5 cursor-nwse-resize bg-black"
+        onPointerDown={(event) => handlePointerDown(event, "resize")}
       />
     </div>
   );
