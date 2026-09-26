@@ -1,1 +1,26 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-pop: pop 150ms ease-out;
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+}
+
+@utility bg-dots {
+  background-image: radial-gradient(var(--color-zinc-300) 1px, transparent 0);
+  background-size: 20px 20px;
+
+  @variant dark {
+    background-image: radial-gradient(var(--color-zinc-800) 1px, transparent 0);
+  }
+}
+
+:root {
+  color-scheme: light dark;
+  -webkit-tap-highlight-color: transparent;
+}

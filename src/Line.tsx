@@ -5,19 +5,14 @@ interface LineProps {
   to: Point;
 }
 
-export const Line = ({ from, to }: LineProps) => {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-
-  return (
-    <div
-      className="pointer-events-none absolute z-0 origin-top-left border-t-2 border-dashed border-black"
-      style={{
-        left: from.x,
-        top: from.y,
-        width: Math.hypot(dx, dy),
-        transform: `rotate(${Math.atan2(dy, dx)}rad)`,
-      }}
-    />
-  );
-};
+export const Line = ({ from, to }: LineProps) => (
+  <line
+    x1={from.x}
+    y1={from.y}
+    x2={to.x}
+    y2={to.y}
+    className="stroke-zinc-300 dark:stroke-zinc-700"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+  />
+);
